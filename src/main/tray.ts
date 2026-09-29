@@ -11,10 +11,12 @@ import { createTrayIcon } from './tray-icon'
  * Zero renders as no title: the bar carries a number or just the glyph. That
  * also covers every state before the first fetch, where the count is zero
  * because nothing has been counted — not because nothing is waiting.
+ *
+ * A bare number, because width is what gets a menu-bar item hidden: on a Mac
+ * with a notch, macOS silently drops the leftmost items that no longer fit.
  */
 export function formatBadgeTitle(count: number): string {
-  if (count === 0) return ''
-  return count === 1 ? '1 PR' : `${count} PRs`
+  return count === 0 ? '' : String(count)
 }
 
 /**

@@ -11,12 +11,9 @@ describe('formatBadgeTitle', () => {
     expect(formatBadgeTitle(0)).toBe('')
   })
 
-  it('reads "1 PR" for exactly one', () => {
-    expect(formatBadgeTitle(1)).toBe('1 PR')
-  })
-
-  it('reads "<n> PRs" for anything else', () => {
-    expect(formatBadgeTitle(16)).toBe('16 PRs')
+  it('is the bare count, which the pull-request glyph beside it already explains', () => {
+    expect(formatBadgeTitle(1)).toBe('1')
+    expect(formatBadgeTitle(16)).toBe('16')
   })
 })
 
