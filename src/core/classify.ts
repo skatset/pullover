@@ -1,4 +1,4 @@
-import { isSnoozeActive } from '@core/snooze'
+import { isSnoozeActive, type SnoozeContext, snoozeReason } from '@core/snooze'
 import {
   approvedSince,
   compareIso,
@@ -19,11 +19,8 @@ import {
   VISIBLE_CATEGORIES,
 } from '@shared/types'
 
-export interface ClassifyContext {
-  myLogin: string
+export interface ClassifyContext extends SnoozeContext {
   snoozes: Record<string, Snooze>
-  /** ISO timestamp treated as "now". Injected so the classifier stays pure. */
-  now: string
 }
 
 interface Verdict {
@@ -199,8 +196,14 @@ export function classify(
   }
 
   const snooze = ctx.snoozes[pr.id]
-  if (snooze !== undefined && isSnoozeActive(pr, snooze, ctx.myLogin, ctx.now)) {
-    return { pr, category: 'waiting', reason: 'Snoozed', waitingSince: null, isSnoozed: true }
+  if (snooze !== undefined && isSnoozeActive(pr, snooze, ctx)) {
+    return {
+      pr,
+      category: 'waiting',
+      ...snoozeReason(pr, snooze),
+      waitingSince: null,
+      isSnoozed: true,
+    }
   }
 
   // Clamped once here rather than in every branch above: no verdict may name
