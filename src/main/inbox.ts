@@ -102,7 +102,13 @@ export class Inbox {
     return items.map((item) => ({ ...item, stack: stacks.get(item.pr.id) ?? null }))
   }
 
-  private classifyContext(myLogin: string, now = this.now()): ClassifyContext {
+  private classifyContext({
+    myLogin,
+    now = this.now(),
+  }: {
+    myLogin: string
+    now?: string
+  }): ClassifyContext {
     return {
       myLogin,
       snoozes: this.deps.store.getSnoozes(),
@@ -124,7 +130,9 @@ export class Inbox {
       this.prs,
       settings.watchAllRepositories ? null : settings.repositories,
     )
-    const items = this.attachStacks(classifyAll(filtered, this.classifyContext(this.myLogin)))
+    const items = this.attachStacks(
+      classifyAll(filtered, this.classifyContext({ myLogin: this.myLogin })),
+    )
     this.emit({
       items,
       attentionCount: countAttention(items),
@@ -156,7 +164,9 @@ export class Inbox {
     const wanted = repository.toLowerCase()
     const pr = this.prs.find((p) => p.number === number && p.repository.toLowerCase() === wanted)
     if (pr === undefined) return null
-    const [item] = this.attachStacks([classify(pr, this.classifyContext(this.myLogin))])
+    const [item] = this.attachStacks([
+      classify(pr, this.classifyContext({ myLogin: this.myLogin })),
+    ])
     return item ?? null
   }
 
@@ -265,7 +275,7 @@ export class Inbox {
       )
 
       const now = this.now()
-      const items = this.attachStacks(classifyAll(filtered, this.classifyContext(myLogin, now)))
+      const items = this.attachStacks(classifyAll(filtered, this.classifyContext({ myLogin, now })))
 
       this.rateLimitedUntil = null
       this.emit({
