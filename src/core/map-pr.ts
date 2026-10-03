@@ -167,6 +167,15 @@ function computeReviewRequestedAt(node: PullRequestNode, myLogin: string): strin
   )
 }
 
+function computeLastReviewRequestAt(node: PullRequestNode, myLogin: string): string | null {
+  return latestIso(
+    reviewRequests(node).flatMap((e) => {
+      const login = e.requestedReviewer?.login
+      return login === myLogin || login === undefined ? [e.createdAt] : []
+    }),
+  )
+}
+
 function computeReadyForReviewAt(node: PullRequestNode): string | null {
   return latestIso(
     node.timelineItems.nodes.flatMap((event) =>
@@ -253,6 +262,7 @@ export function mapPullRequest(
     reviewThreads,
     conversationComments,
     reviewRequestedAt: computeReviewRequestedAt(node, myLogin),
+    lastReviewRequestAt: computeLastReviewRequestAt(node, myLogin),
     readyForReviewAt: computeReadyForReviewAt(node),
     mentionsAt: computeMentionsAt(
       node,
