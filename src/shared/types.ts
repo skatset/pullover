@@ -38,6 +38,8 @@ export interface ThreadComment {
   authorLogin: string
   createdAt: string
   bodyText: string
+  /** Optional so fixtures need not spell it out; `mapPullRequest` always fills it in. */
+  authorIsBot?: boolean
 }
 
 export interface ReviewThread {
@@ -57,6 +59,8 @@ export interface Review {
    * bodies keep compiling unchanged; `mapPullRequest` always fills it in.
    */
   bodyText?: string
+  /** Optional for the same reason as `bodyText`. */
+  authorIsBot?: boolean
 }
 
 export type ReviewDecision = 'APPROVED' | 'CHANGES_REQUESTED' | 'REVIEW_REQUIRED' | null

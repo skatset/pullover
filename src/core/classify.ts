@@ -8,6 +8,7 @@ import {
   oldestBlockingChangeRequestAt,
   oldestPendingReplyAt,
   threadsAwaitingMyReply,
+  unansweredPrCommentsAt,
   unansweredThreads,
 } from '@core/threads'
 import {
@@ -149,6 +150,16 @@ function classifyOwnPr(pr: PullRequest, myLogin: string): Verdict {
       category: 'my-pr-action',
       reason: `${unanswered.length} ${word}`,
       waitingSince: oldestPendingReplyAt(unanswered, myLogin) ?? pr.updatedAt,
+    }
+  }
+
+  const comments = unansweredPrCommentsAt(pr, myLogin)
+  if (comments.length > 0) {
+    const word = pluralize(comments.length, 'new comment', 'new comments')
+    return {
+      category: 'my-pr-action',
+      reason: `${comments.length} ${word}`,
+      waitingSince: comments[0] ?? pr.updatedAt,
     }
   }
 

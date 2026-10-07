@@ -101,7 +101,13 @@ describe('mapPullRequest', () => {
     )
     // bodyText defaults to '' when the source omits it.
     expect(pr.reviews).toEqual([
-      { authorLogin: 'bob', state: 'APPROVED', submittedAt: '2026-08-02T10:00:00Z', bodyText: '' },
+      {
+        authorLogin: 'bob',
+        state: 'APPROVED',
+        submittedAt: '2026-08-02T10:00:00Z',
+        bodyText: '',
+        authorIsBot: false,
+      },
     ])
   })
 
@@ -129,18 +135,21 @@ describe('mapPullRequest', () => {
         state: 'APPROVED',
         submittedAt: '2026-08-01T09:00:00Z',
         bodyText: '',
+        authorIsBot: false,
       },
       {
         authorLogin: 'second',
         state: 'CHANGES_REQUESTED',
         submittedAt: '2026-08-02T09:00:00Z',
         bodyText: '',
+        authorIsBot: false,
       },
       {
         authorLogin: 'third',
         state: 'COMMENTED',
         submittedAt: '2026-08-03T09:00:00Z',
         bodyText: '',
+        authorIsBot: false,
       },
     ])
   })
@@ -173,7 +182,14 @@ describe('mapPullRequest', () => {
       {
         id: 'RT_1',
         isResolved: true,
-        comments: [{ authorLogin: 'vlad', createdAt: '2026-08-02T10:00:00Z', bodyText: '' }],
+        comments: [
+          {
+            authorLogin: 'vlad',
+            createdAt: '2026-08-02T10:00:00Z',
+            bodyText: '',
+            authorIsBot: false,
+          },
+        ],
       },
     ])
   })
@@ -241,9 +257,14 @@ describe('mapPullRequest', () => {
       'vlad',
     )
     expect(pr.reviewThreads[0].comments).toEqual([
-      { authorLogin: 'first', createdAt: '2026-08-01T10:00:00Z', bodyText: '' },
-      { authorLogin: 'second', createdAt: '2026-08-02T10:00:00Z', bodyText: '' },
-      { authorLogin: 'third', createdAt: '2026-08-03T10:00:00Z', bodyText: '' },
+      { authorLogin: 'first', createdAt: '2026-08-01T10:00:00Z', bodyText: '', authorIsBot: false },
+      {
+        authorLogin: 'second',
+        createdAt: '2026-08-02T10:00:00Z',
+        bodyText: '',
+        authorIsBot: false,
+      },
+      { authorLogin: 'third', createdAt: '2026-08-03T10:00:00Z', bodyText: '', authorIsBot: false },
     ])
   })
 
@@ -317,9 +338,48 @@ describe('mapPullRequest', () => {
       'vlad',
     )
     expect(pr.conversationComments).toEqual([
-      { authorLogin: 'alice', createdAt: '2026-08-01T10:00:00Z', bodyText: 'first' },
-      { authorLogin: 'bob', createdAt: '2026-08-03T10:00:00Z', bodyText: 'second' },
+      {
+        authorLogin: 'alice',
+        createdAt: '2026-08-01T10:00:00Z',
+        bodyText: 'first',
+        authorIsBot: false,
+      },
+      {
+        authorLogin: 'bob',
+        createdAt: '2026-08-03T10:00:00Z',
+        bodyText: 'second',
+        authorIsBot: false,
+      },
     ])
+  })
+
+  it('marks a review or comment written by a bot', () => {
+    const pr = mapPullRequest(
+      node({
+        reviews: {
+          nodes: [
+            {
+              author: { __typename: 'Bot', login: 'cursor' },
+              state: 'COMMENTED',
+              submittedAt: '2026-08-02T10:00:00Z',
+            },
+          ],
+        },
+        comments: {
+          nodes: [
+            {
+              author: { __typename: 'User', login: 'alice' },
+              createdAt: '2026-08-02T10:00:00Z',
+              bodyText: 'hi',
+            },
+          ],
+        },
+      }),
+      [],
+      'vlad',
+    )
+    expect(pr.reviews[0]?.authorIsBot).toBe(true)
+    expect(pr.conversationComments[0]?.authorIsBot).toBe(false)
   })
 
   describe('reviewRequestedAt', () => {
