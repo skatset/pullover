@@ -361,7 +361,7 @@ describe('mapPullRequest', () => {
     ])
   })
 
-  it('marks a review or comment written by a bot', () => {
+  it('marks the reviews and comments written by a bot', () => {
     const pr = mapPullRequest(
       node({
         reviews: {
@@ -371,13 +371,23 @@ describe('mapPullRequest', () => {
               state: 'COMMENTED',
               submittedAt: '2026-08-02T10:00:00Z',
             },
+            {
+              author: { __typename: 'User', login: 'alice' },
+              state: 'COMMENTED',
+              submittedAt: '2026-08-02T11:00:00Z',
+            },
           ],
         },
         comments: {
           nodes: [
             {
-              author: { __typename: 'User', login: 'alice' },
+              author: { __typename: 'Bot', login: 'chatgpt-codex-connector' },
               createdAt: '2026-08-02T10:00:00Z',
+              bodyText: 'Summary',
+            },
+            {
+              author: { __typename: 'User', login: 'alice' },
+              createdAt: '2026-08-02T11:00:00Z',
               bodyText: 'hi',
             },
           ],
@@ -386,8 +396,8 @@ describe('mapPullRequest', () => {
       [],
       'vlad',
     )
-    expect(pr.reviews[0]?.authorIsBot).toBe(true)
-    expect(pr.conversationComments[0]?.authorIsBot).toBe(false)
+    expect(pr.reviews.map((r) => r.authorIsBot)).toEqual([true, false])
+    expect(pr.conversationComments.map((c) => c.authorIsBot)).toEqual([true, false])
   })
 
   describe('reviewRequestedAt', () => {
