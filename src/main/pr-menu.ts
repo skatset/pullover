@@ -14,6 +14,8 @@ const MAX_BLOCKERS = 3
 
 interface PrMenuOptions {
   isSnoozed: boolean
+  /** Only someone else's pull request can be snoozed until it asks for you again. */
+  isOwn: boolean
   repository: string
   /** Open pull requests the description links to, in its order. */
   blockers: PullRequestRef[]
@@ -38,6 +40,12 @@ function untilMerged(blockers: PullRequestRef[], repository: string): PrMenuEntr
   ]
 }
 
+const UNTIL_RE_REQUESTED: PrMenuEntry = {
+  type: 'item',
+  label: 'Snooze until re-requested',
+  action: { type: 'snooze-until-review-requested' },
+}
+
 /**
  * The card's context menu, top to bottom: opens, then copies, then snooze.
  *
@@ -49,7 +57,12 @@ function untilMerged(blockers: PullRequestRef[], repository: string): PrMenuEntr
  * Kept apart from the `Menu.popup` call in `ipc.ts` so the wording and the
  * ordering can be tested without an Electron runtime.
  */
-export function prMenuEntries({ isSnoozed, repository, blockers }: PrMenuOptions): PrMenuEntry[] {
+export function prMenuEntries({
+  isSnoozed,
+  isOwn,
+  repository,
+  blockers,
+}: PrMenuOptions): PrMenuEntry[] {
   // "New activity" is deliberately vaguer than the wake condition in
   // `snooze.ts`, which is a push or a reply in a thread you are already in —
   // not every comment on the pull request.
@@ -64,6 +77,7 @@ export function prMenuEntries({ isSnoozed, repository, blockers }: PrMenuOptions
         { type: 'item', label: 'Snooze for 4 hours', action: { type: 'snooze-4-hours' } },
         { type: 'item', label: 'Snooze until tomorrow', action: { type: 'snooze-until-tomorrow' } },
         ...untilMerged(blockers, repository),
+        ...(isOwn ? [] : [UNTIL_RE_REQUESTED]),
       ]
 
   return [

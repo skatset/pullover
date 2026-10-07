@@ -1,7 +1,7 @@
 import { isSnoozeActive, type SnoozeContext, snoozeReason } from '@core/snooze'
 import type { PullRequestState, Snooze } from '@shared/types'
 import { describe, expect, it } from 'vitest'
-import { makeComment, makePullRequest, makeThread } from './test-factory'
+import { makeComment, makePullRequest, makeReview, makeThread } from './test-factory'
 
 const ME = 'vlad'
 const NOW = '2026-08-10T12:00:00Z'
@@ -159,6 +159,88 @@ describe('snoozeReason', () => {
   it('says only "Snoozed" for the other kinds', () => {
     const snooze: Snooze = { prId: 'PR_1', type: 'until-activity', snoozedAt: NOW }
     expect(snoozeReason(makePullRequest(), snooze)).toEqual({ reason: 'Snoozed' })
+  })
+})
+
+describe('isSnoozeActive — until-review-requested', () => {
+  const snooze: Snooze = {
+    prId: 'PR_1',
+    type: 'until-review-requested',
+    snoozedAt: '2026-08-10T10:00:00Z',
+  }
+
+  const asked = (...reviewRequestsAt: string[]) =>
+    makePullRequest({ buckets: ['review-requested'], reviewRequestsAt })
+  const answeredAt = (submittedAt: string) => [makeReview(ME, submittedAt, { state: 'COMMENTED' })]
+
+  it('stays asleep while I have not been asked since', () => {
+    expect(isSnoozeActive(asked('2026-08-09T10:00:00Z'), snooze, ctx())).toBe(true)
+  })
+
+  it('stays asleep when I was never asked at all', () => {
+    expect(isSnoozeActive(makePullRequest(), snooze, ctx())).toBe(true)
+  })
+
+  it('wakes on a review request newer than the snooze while it is pending', () => {
+    expect(isSnoozeActive(asked('2026-08-10T11:00:00Z'), snooze, ctx())).toBe(false)
+  })
+
+  it('does not wake on a request in the same second', () => {
+    expect(isSnoozeActive(asked('2026-08-10T10:00:00Z'), snooze, ctx())).toBe(true)
+  })
+
+  it('stays awake once I review the request, though GitHub then drops it as pending', () => {
+    const pr = makePullRequest({
+      buckets: ['involves'],
+      reviewRequestsAt: ['2026-08-10T11:00:00Z'],
+      reviews: answeredAt('2026-08-10T12:00:00Z'),
+    })
+    expect(isSnoozeActive(pr, snooze, ctx())).toBe(false)
+  })
+
+  it('stays awake when another team is asked after I answered', () => {
+    const pr = makePullRequest({
+      buckets: ['involves'],
+      reviewRequestsAt: ['2026-08-10T11:00:00Z', '2026-08-10T13:00:00Z'],
+      reviews: answeredAt('2026-08-10T12:00:00Z'),
+    })
+    expect(isSnoozeActive(pr, snooze, ctx())).toBe(false)
+  })
+
+  it('goes back to sleep when a teammate answered the team request instead of me', () => {
+    const pr = makePullRequest({
+      buckets: ['involves'],
+      reviewRequestsAt: ['2026-08-10T11:00:00Z'],
+      reviews: [
+        ...answeredAt('2026-08-09T10:00:00Z'),
+        makeReview('bob', '2026-08-10T11:30:00Z', { state: 'APPROVED' }),
+      ],
+    })
+    expect(isSnoozeActive(pr, snooze, ctx())).toBe(true)
+  })
+
+  it('does not wake on my review alone, with no request since the snooze', () => {
+    const pr = makePullRequest({
+      buckets: ['involves'],
+      reviewRequestsAt: ['2026-08-09T10:00:00Z'],
+      reviews: answeredAt('2026-08-10T12:00:00Z'),
+    })
+    expect(isSnoozeActive(pr, snooze, ctx())).toBe(true)
+  })
+
+  it('ignores new commits and replies', () => {
+    const pr = makePullRequest({
+      lastCommitPushedAt: '2026-08-10T11:00:00Z',
+      reviewThreads: [
+        makeThread({
+          comments: [
+            makeComment(ME, '2026-08-09T10:00:00Z'),
+            makeComment('alice', '2026-08-10T11:00:00Z'),
+          ],
+        }),
+      ],
+    })
+    expect(isSnoozeActive(pr, snooze, ctx())).toBe(true)
   })
 })
 

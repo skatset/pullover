@@ -1,5 +1,5 @@
 import { formatRef, refKey } from '@core/pr-refs'
-import { hasNewReplyInMyThreadsSince } from '@core/threads'
+import { hasNewReplyInMyThreadsSince, myLatestReview } from '@core/threads'
 import type { ClassifiedPullRequest, PullRequest, PullRequestState, Snooze } from '@shared/types'
 
 export interface SnoozeContext {
@@ -31,6 +31,16 @@ export function isSnoozeActive(pr: PullRequest, snooze: Snooze, ctx: SnoozeConte
         snooze.blocker !== undefined &&
         (ctx.pullRequestStates.get(refKey(snooze.blocker)) ?? 'OPEN') === 'OPEN'
       )
+    case 'until-review-requested': {
+      // Woken by the first request since the snooze while it is pending, or
+      // for good once I have reviewed after it — anchoring on the first means
+      // a later request to some other team cannot put it back to sleep.
+      const first = pr.reviewRequestsAt.find((at) => at > snooze.snoozedAt)
+      if (first === undefined) return true
+      const myReview = myLatestReview(pr, ctx.myLogin)
+      const answered = myReview !== null && myReview.submittedAt > first
+      return !(pr.buckets.includes('review-requested') || answered)
+    }
   }
   // A snooze persisted by an older build can carry a type no longer in the
   // union — treat it as expired rather than returning `undefined`.
@@ -47,5 +57,6 @@ export function snoozeReason(
       snoozedUntilMerged: snooze.blocker,
     }
   }
+  if (snooze.type === 'until-review-requested') return { reason: 'Until re-requested' }
   return { reason: 'Snoozed' }
 }

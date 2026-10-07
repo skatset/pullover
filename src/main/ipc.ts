@@ -81,6 +81,7 @@ export function registerIpc(deps: IpcDeps): void {
       let chosen: PrMenuAction | null = null
       const entries = prMenuEntries({
         isSnoozed: request.isSnoozed,
+        isOwn: request.authorLogin === deps.inbox.getSnapshot().myLogin,
         ...deps.inbox.snoozeBlockers(request.prId),
       })
       const toTemplate = (entry: PrMenuEntry): MenuItemConstructorOptions => {

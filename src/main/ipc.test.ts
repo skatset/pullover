@@ -1,7 +1,7 @@
 import { IPC } from '@shared/ipc'
 import { DEFAULT_SETTINGS } from '@shared/types'
 import type { BrowserWindow } from 'electron'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Inbox } from './inbox'
 import { registerIpc } from './ipc'
 import type { KeyValueStore, PersistedState } from './store'
@@ -61,6 +61,7 @@ let send: ReturnType<typeof vi.fn>
 let hide: ReturnType<typeof vi.fn>
 let shortcutCalls: (string | null)[]
 let mcpApplied: boolean[]
+let inbox: Inbox
 
 beforeEach(() => {
   handlers.clear()
@@ -71,7 +72,7 @@ beforeEach(() => {
   hide = vi.fn()
   shortcutCalls = []
   mcpApplied = []
-  const inbox = new Inbox({ store, getClient: () => null, onChange: () => {} })
+  inbox = new Inbox({ store, getClient: () => null, onChange: () => {} })
 
   registerIpc({
     inbox,
@@ -101,6 +102,10 @@ function call(channel: string, ...args: never[]): unknown {
   if (handler === undefined) throw new Error(`no handler registered for "${channel}"`)
   return handler(null, ...args)
 }
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 describe('settings push', () => {
   it('pushes the updated settings after setSettings', async () => {
@@ -195,13 +200,17 @@ describe('hidePopup', () => {
 })
 
 describe('pull request context menu', () => {
-  function popMenu(isSnoozed: boolean): { menu: PoppedMenu; action: Promise<unknown> } {
+  function popMenu(
+    isSnoozed: boolean,
+    authorLogin = 'alice',
+  ): { menu: PoppedMenu; action: Promise<unknown> } {
     const action = call(IPC.showPrMenu, {
+      authorLogin,
       isSnoozed,
       x: 12.4,
       y: 40.6,
     } as never) as Promise<unknown>
-    return { menu: poppedMenus[0], action }
+    return { menu: poppedMenus.at(-1)!, action }
   }
 
   function clickItem(menu: PoppedMenu, label: string): void {
@@ -234,6 +243,15 @@ describe('pull request context menu', () => {
     const { menu, action } = popMenu(false)
     menu.options.callback()
     await expect(action).resolves.toBeNull()
+  })
+
+  it("offers to wait for a re-request only on someone else's pull request", () => {
+    vi.spyOn(inbox, 'getSnapshot').mockReturnValue({ ...inbox.getSnapshot(), myLogin: 'vlad' })
+    const labelsFor = (authorLogin: string) =>
+      popMenu(false, authorLogin).menu.items.map((entry) => entry.label)
+
+    expect(labelsFor('alice')).toContain('Snooze until re-requested')
+    expect(labelsFor('vlad')).not.toContain('Snooze until re-requested')
   })
 
   it('offers Unsnooze in place of the snooze options for a snoozed pull request', async () => {

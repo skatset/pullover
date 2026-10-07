@@ -13,7 +13,9 @@ const CI_STATUSES: CiStatus[] = ['success', 'failure', 'pending', 'none']
 
 // Every key of `STATUS_ACCENTS` in pr-colors.ts, plus one that isn't in it —
 // the counted reasons fall through to the default accent, and that fallback
-// is as worth holding as the table. "Snoozed" is muted by `isSnoozed` instead.
+// is as worth holding as the table. The snooze reasons are muted by `isSnoozed` instead.
+const SNOOZE_REASONS = new Set(['Snoozed', 'Until re-requested'])
+
 const REASONS = [
   'CI is red',
   'Changes requested',
@@ -22,6 +24,7 @@ const REASONS = [
   'Waiting on author',
   'Waiting on reviewers',
   'Snoozed',
+  'Until re-requested',
   'Mentioned',
   '3 new replies',
 ]
@@ -39,7 +42,7 @@ visualCase(
   'status-text',
   <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: 12 }}>
     {REASONS.map((reason) => (
-      <StatusText key={reason} item={makeItem({ reason, isSnoozed: reason === 'Snoozed' })} />
+      <StatusText key={reason} item={makeItem({ reason, isSnoozed: SNOOZE_REASONS.has(reason) })} />
     ))}
   </div>,
 )

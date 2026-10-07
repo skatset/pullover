@@ -396,6 +396,57 @@ describe('classify — snooze override', () => {
     expect(result.isSnoozed).toBe(false)
   })
 
+  it('says what a snooze until re-requested waits for, and lets the request wake it', () => {
+    const pr = makePullRequest({
+      buckets: ['review-requested'],
+      reviews: [makeReview(ME, '2026-08-09T10:00:00Z')],
+      reviewRequestedAt: '2026-08-08T10:00:00Z',
+    })
+    const snoozes = {
+      PR_1: {
+        prId: 'PR_1',
+        type: 'until-review-requested' as const,
+        snoozedAt: '2026-08-10T10:00:00Z',
+      },
+    }
+    expect(classify(pr, ctx(snoozes))).toMatchObject({
+      category: 'waiting',
+      reason: 'Until re-requested',
+      isSnoozed: true,
+    })
+
+    const asked = {
+      ...pr,
+      reviewRequestedAt: '2026-08-10T11:00:00Z',
+      reviewRequestsAt: ['2026-08-10T11:00:00Z'],
+    }
+    expect(classify(asked, ctx(snoozes)).reason).toBe('Re-review requested')
+  })
+
+  it('surfaces a reply after I answered the re-request, rather than snoozing again', () => {
+    const pr = makePullRequest({
+      buckets: ['involves'],
+      reviewRequestsAt: ['2026-08-10T11:00:00Z'],
+      reviews: [makeReview(ME, '2026-08-10T12:00:00Z')],
+      reviewThreads: [
+        makeThread({
+          comments: [
+            makeComment(ME, '2026-08-10T12:00:00Z'),
+            makeComment('alice', '2026-08-10T13:00:00Z'),
+          ],
+        }),
+      ],
+    })
+    const snoozes = {
+      PR_1: {
+        prId: 'PR_1',
+        type: 'until-review-requested' as const,
+        snoozedAt: '2026-08-10T10:00:00Z',
+      },
+    }
+    expect(classify(pr, ctx(snoozes))).toMatchObject({ category: 'new-replies', isSnoozed: false })
+  })
+
   it('keeps a hidden PR hidden rather than surfacing it as waiting', () => {
     const pr = makePullRequest({ isDraft: true, buckets: ['review-requested'] })
     const snoozes = {

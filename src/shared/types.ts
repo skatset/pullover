@@ -91,6 +91,8 @@ export interface PullRequest {
   conversationComments: ThreadComment[]
   /** When the user was last asked to review this PR, or null if never. */
   reviewRequestedAt: string | null
+  /** Every review request naming the user or nobody (a team, a bot), oldest first. */
+  reviewRequestsAt: string[]
   /**
    * When the pull request stopped being a draft, or null if it never was one.
    * The floor on any waiting time: before it, the PR was hidden.
@@ -161,12 +163,13 @@ export interface ClassifiedPullRequest {
   stack: StackPosition | null
 }
 
-export type SnoozeType = 'until-activity' | 'until-time' | 'until-merged'
+export type SnoozeType = 'until-activity' | 'until-time' | 'until-merged' | 'until-review-requested'
 
 export type SnoozeRequest =
   | { type: 'until-activity' }
   | { type: 'until-time'; hours: number }
   | { type: 'until-merged'; blocker: PullRequestRef }
+  | { type: 'until-review-requested' }
 
 export interface Snooze {
   prId: string

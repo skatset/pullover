@@ -27,6 +27,7 @@ export type PrMenuAction =
   | { type: 'snooze-4-hours' }
   | { type: 'snooze-until-tomorrow' }
   | { type: 'snooze-until-merged'; blocker: PullRequestRef }
+  | { type: 'snooze-until-review-requested' }
   | { type: 'unsnooze' }
   | { type: 'open' }
   | { type: 'open-files' }
@@ -35,6 +36,8 @@ export type PrMenuAction =
 
 export interface PrMenuRequest {
   prId: string
+  /** Whose pull request it is: only someone else's can be snoozed until it asks for you again. */
+  authorLogin: string
   /** Collapses the snooze options into a single Unsnooze, as the card's pill does. */
   isSnoozed: boolean
   /** Where to pop the menu, in window coordinates. */

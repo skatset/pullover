@@ -74,7 +74,10 @@ export class AppStore {
   }
 
   snooze({ prId, request, now }: { prId: string; request: SnoozeRequest; now: string }): void {
-    const snooze: Snooze = { prId, type: request.type, snoozedAt: now }
+    // To the second, like every timestamp GitHub sends: the wake rules compare
+    // ISO strings, and `.500Z` sorts before `Z` within the same second.
+    const snoozedAt = now.replace(/\.\d+Z$/, 'Z')
+    const snooze: Snooze = { prId, type: request.type, snoozedAt }
     if (request.type === 'until-time') {
       snooze.until = new Date(Date.parse(now) + request.hours * 3_600_000).toISOString()
     }

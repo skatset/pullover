@@ -28,7 +28,12 @@ export async function showPrMenu(
   onSnoozed: (item: ClassifiedPullRequest) => void,
 ): Promise<void> {
   const { pr } = item
-  const action = await window.api.showPrMenu({ prId: pr.id, isSnoozed: item.isSnoozed, ...anchor })
+  const action = await window.api.showPrMenu({
+    prId: pr.id,
+    authorLogin: pr.authorLogin,
+    isSnoozed: item.isSnoozed,
+    ...anchor,
+  })
   if (action === null) return
 
   switch (action.type) {
@@ -46,6 +51,10 @@ export async function showPrMenu(
       return
     case 'snooze-until-merged':
       await window.api.snooze(pr.id, { type: 'until-merged', blocker: action.blocker })
+      onSnoozed(item)
+      return
+    case 'snooze-until-review-requested':
+      await window.api.snooze(pr.id, { type: 'until-review-requested' })
       onSnoozed(item)
       return
     case 'unsnooze':

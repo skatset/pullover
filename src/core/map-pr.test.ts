@@ -396,6 +396,22 @@ describe('mapPullRequest', () => {
       expect(mapPullRequest(n, [], 'vlad').reviewRequestedAt).toBe('2026-08-01T10:00:00Z')
     })
 
+    it('lists every request naming me or nobody, oldest first, and none naming others', () => {
+      const n = node({
+        timelineItems: {
+          nodes: [
+            requestedAnonymously('2026-08-08T10:00:00Z'),
+            requested('bob', '2026-08-09T10:00:00Z'),
+            requested('vlad', '2026-08-01T10:00:00Z'),
+          ],
+        },
+      })
+      expect(mapPullRequest(n, [], 'vlad').reviewRequestsAt).toEqual([
+        '2026-08-01T10:00:00Z',
+        '2026-08-08T10:00:00Z',
+      ])
+    })
+
     it('does not read a request naming nobody out of a ready-for-review event', () => {
       const n = node({ timelineItems: { nodes: [readyForReview('2026-08-02T10:00:00Z')] } })
       expect(mapPullRequest(n, [], 'vlad').reviewRequestedAt).toBeNull()

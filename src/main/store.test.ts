@@ -237,6 +237,22 @@ describe('snoozes', () => {
     expect(snooze?.until).toBeUndefined()
   })
 
+  it('records when it snoozed to the second, the precision GitHub dates everything in', () => {
+    store.snooze({
+      prId: 'PR_1',
+      request: { type: 'until-activity' },
+      now: '2026-08-10T12:00:00.500Z',
+    })
+    expect(store.getSnoozes()['PR_1']?.snoozedAt).toBe('2026-08-10T12:00:00Z')
+  })
+
+  it('records a snooze until re-requested with no deadline', () => {
+    store.snooze({ prId: 'PR_1', request: { type: 'until-review-requested' }, now: NOW })
+    const snooze = store.getSnoozes()['PR_1']
+    expect(snooze?.type).toBe('until-review-requested')
+    expect(snooze?.until).toBeUndefined()
+  })
+
   it('removes a snooze', () => {
     store.snooze({ prId: 'PR_1', request: { type: 'until-activity' }, now: NOW })
     store.unsnooze('PR_1')
