@@ -247,6 +247,109 @@ describe('classify — author branch', () => {
     expect(classify(pr, ctx()).reason).toBe('2 open threads')
   })
 
+  it('my-pr-action on a review left as text for the whole PR', () => {
+    const pr = makePullRequest({
+      ...mine,
+      reviews: [
+        makeReview('alice', '2026-08-02T10:00:00Z', { bodyText: 'Deploy skew loses saves.' }),
+      ],
+    })
+    const result = classify(pr, ctx())
+    expect(result.category).toBe('my-pr-action')
+    expect(result.reason).toBe('1 new comment')
+  })
+
+  it('my-pr-action on a conversation comment', () => {
+    const pr = makePullRequest({
+      ...mine,
+      conversationComments: [makeComment('alice', '2026-08-02T10:00:00Z', 'Why not RQ?')],
+    })
+    expect(classify(pr, ctx()).reason).toBe('1 new comment')
+  })
+
+  it('counts every unanswered PR comment and dates them from the oldest', () => {
+    const pr = makePullRequest({
+      ...mine,
+      reviews: [makeReview('alice', '2026-08-03T10:00:00Z', { bodyText: 'Second thought' })],
+      conversationComments: [makeComment('bob', '2026-08-02T10:00:00Z', 'Question')],
+    })
+    const result = classify(pr, ctx())
+    expect(result.reason).toBe('2 new comments')
+    expect(result.waitingSince).toBe('2026-08-02T10:00:00Z')
+  })
+
+  it('ignores PR comments from bots', () => {
+    const pr = makePullRequest({
+      ...mine,
+      reviews: [
+        makeReview('cursor', '2026-08-02T10:00:00Z', {
+          bodyText: 'Bugbot review',
+          authorIsBot: true,
+        }),
+      ],
+      conversationComments: [
+        { ...makeComment('codex', '2026-08-02T10:00:00Z', 'Summary'), authorIsBot: true },
+      ],
+    })
+    expect(classify(pr, ctx()).reason).toBe('Waiting on reviewers')
+  })
+
+  it('ignores a review with no text, which only carries inline comments', () => {
+    const pr = makePullRequest({
+      ...mine,
+      reviews: [makeReview('alice', '2026-08-02T10:00:00Z', { bodyText: '  ' })],
+    })
+    expect(classify(pr, ctx()).reason).toBe('Waiting on reviewers')
+  })
+
+  it('ignores the text of an approval', () => {
+    const pr = makePullRequest({
+      ...mine,
+      reviewDecision: 'APPROVED',
+      reviews: [
+        makeReview('alice', '2026-08-02T10:00:00Z', { state: 'APPROVED', bodyText: 'LGTM' }),
+      ],
+    })
+    expect(classify(pr, ctx()).reason).toBe('Ready to merge')
+  })
+
+  it('treats my reply after a PR comment as the answer', () => {
+    const pr = makePullRequest({
+      ...mine,
+      conversationComments: [
+        makeComment('alice', '2026-08-02T10:00:00Z', 'Why not RQ?'),
+        makeComment(ME, '2026-08-02T11:00:00Z', 'Tried it'),
+      ],
+    })
+    expect(classify(pr, ctx()).reason).toBe('Waiting on reviewers')
+  })
+
+  it('treats my push after a PR comment as the answer', () => {
+    const pr = makePullRequest({
+      ...mine,
+      lastCommitPushedAt: '2026-08-03T10:00:00Z',
+      reviews: [makeReview('alice', '2026-08-02T10:00:00Z', { bodyText: 'Rename this' })],
+    })
+    expect(classify(pr, ctx()).reason).toBe('Waiting on reviewers')
+  })
+
+  it('open threads outrank PR comments, which outrank a red CI', () => {
+    const comment = makeComment('alice', '2026-08-02T10:00:00Z', 'Question')
+    const withThread = makePullRequest({
+      ...mine,
+      conversationComments: [comment],
+      reviewThreads: [makeThread({ comments: [makeComment('bob', '2026-08-02T10:00:00Z')] })],
+    })
+    expect(classify(withThread, ctx()).reason).toBe('1 open thread')
+
+    const withRedCi = makePullRequest({
+      ...mine,
+      ciStatus: 'failure',
+      conversationComments: [comment],
+    })
+    expect(classify(withRedCi, ctx()).reason).toBe('1 new comment')
+  })
+
   it('ignores resolved threads on my own PR', () => {
     const pr = makePullRequest({
       ...mine,

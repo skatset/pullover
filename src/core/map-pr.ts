@@ -12,6 +12,7 @@ import type {
 } from '@shared/types'
 
 interface ActorNode {
+  __typename?: string
   login: string
   avatarUrl?: string
 }
@@ -102,6 +103,7 @@ function flattenComments(nodes: Array<CommentNode | null>): ThreadComment[] {
             authorLogin: comment.author.login,
             createdAt: comment.createdAt,
             bodyText: comment.bodyText,
+            authorIsBot: comment.author.__typename === 'Bot',
           },
         ]
       : [],
@@ -236,6 +238,7 @@ export function mapPullRequest(
             state: review.state,
             submittedAt: review.submittedAt,
             bodyText: review.bodyText ?? '',
+            authorIsBot: review.author.__typename === 'Bot',
           },
         ]
       : [],

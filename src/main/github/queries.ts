@@ -39,19 +39,19 @@ export const DETAILS_QUERY = `
         author { login avatarUrl }
         repository { nameWithOwner }
         reviews(last: 50) {
-          nodes { author { login } state submittedAt bodyText }
+          nodes { author { __typename login } state submittedAt bodyText }
         }
         reviewThreads(last: 50) {
           nodes {
             id
             isResolved
             comments(last: 50) {
-              nodes { author { login } createdAt bodyText }
+              nodes { author { __typename login } createdAt bodyText }
             }
           }
         }
         comments(last: 50) {
-          nodes { author { login } createdAt bodyText }
+          nodes { author { __typename login } createdAt bodyText }
         }
         commits(last: 1) {
           nodes {
