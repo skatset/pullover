@@ -101,7 +101,7 @@ export default function DesktopFrame({ mode, count, children }: Props): React.JS
           {/* `formatBadgeTitle` in src/main/tray.ts, whose module can't be
               imported here — it pulls in electron. */}
           <Text as="span" variant="caption-1" color="neutral" numeric>
-            {count} PRs
+            {count}
           </Text>
         </View>
 
